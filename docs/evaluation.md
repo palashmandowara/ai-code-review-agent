@@ -22,6 +22,8 @@ The CLI computes numerical precision/recall/F1, latency, and configured token co
 
 The harness passes a case's behavior context only to `context` and `tool`. For `tool`, it runs Ruff on that case's reconstructed Python source. These two modes thus receive extra information, and differences cannot be attributed solely to the prompting strategy. A failed call appears as a failure and causes aggregate precision, recall, and F1 to be `null`. A complete run includes one JSON line per case and a final summary with a dataset SHA-256.
 
+Prompt v2 requests a single added line per finding and, for Groq GPT-OSS 20B/120B, uses Groq's strict JSON Schema output mode. Other OpenAI-compatible endpoints retain JSON object mode. Rejected finding locations are reported with a reason. Compare approaches only when dataset checksum, prompt version, and model match; earlier v1 runs are diagnostic history, not part of the v2 comparison.
+
 On Windows, from the project directory with `.env` set to `REVIEW_MODE=model` and the Groq settings, run the pilot in Docker. Each run makes six model calls. Keep the result files locally because they include model output and case text; do not commit them.
 
 ```powershell
