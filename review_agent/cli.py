@@ -94,6 +94,8 @@ async def benchmark(path: Path, approach: str, predictions_path: Path | None = N
                         if durations and predictions is None else None),
         "estimated_total_usd": round(sum(costs), 6) if predictions is None else None,
         "dataset_sha256": hashlib.sha256(dataset_bytes).hexdigest(),
+        "dataset_canonical_sha256": hashlib.sha256(json.dumps(cases, sort_keys=True,
+            separators=(",", ":")).encode()).hexdigest(),
         "review_mode": os.getenv("REVIEW_MODE", "model") if predictions is None else "replay",
         "metric": "provisional_location_match_requires_semantic_review",
         "models": sorted(models),
