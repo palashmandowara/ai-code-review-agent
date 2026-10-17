@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 
 from review_agent.cli import benchmark, case_diagnostics
+from review_agent.core import changed_lines
 
 
 def test_oracle_replay(capsys):
@@ -49,3 +50,14 @@ def test_replay_jsonl_preserves_rejected_findings(tmp_path, capsys):
     assert (result["tp"], result["fp"], result["fn"]) == (1, 1, 0)
     assert result["category_matches"] == 0
     assert result["complete"] is True
+
+
+def test_pilot_labels_and_black_work_are_present():
+    root = Path(__file__).resolve().parents[1] / "benchmark" / "datasets"
+    cases = json.loads((root / "pilot.json").read_text())
+    assert "schedule_formatting(sources, loop, executor)" in cases[0]["files"]["black.py"]
+    for case in cases:
+        locations = changed_lines(case["diff"])
+        for label in case["expected"]:
+            assert label["line_start"] in locations[label["file_path"]]
+        assert set(case["files"]) == set(locations)
