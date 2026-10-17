@@ -26,6 +26,8 @@ Dataset JSON items contain `id`, `diff`, and `expected` findings with `file_path
 
 Check the evaluation code offline with `review-agent benchmark benchmark/datasets/dev.json --predictions benchmark/datasets/oracle_predictions.json`. The oracle file is a scoring test, never a measured model result. For real experiments, run each approach on `dev.json`, freeze prompts and matching rules, then run each on `heldout.json`. Save full terminal output and configuration for reproducibility.
 
+A six-case sourced pilot is in `benchmark/datasets/pilot.json`: four adapted regressions from documented BugsInPy fixes and two synthetic clean controls. It is a workflow demonstration, not a held-out performance benchmark. See [`docs/evaluation.md`](docs/evaluation.md) for provenance, limitations, and Windows commands to run all three approaches with a configured model.
+
 ## Deployment
 
 Docker Compose supplies PostgreSQL and Redis for local development. Production needs managed database/queue, HTTPS reverse proxy, secret management, backups, and monitoring. No AWS resources are provisioned by this repository.

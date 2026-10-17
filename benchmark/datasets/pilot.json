@@ -1,0 +1,112 @@
+[
+  {
+    "id": "black-1",
+    "source": "BugsInPy reverse-fix adaptation",
+    "provenance": "https://github.com/soarsmu/BugsInPy/blob/master/projects/black/bugs/1/bug_patch.txt",
+    "fixed_commit": "c0a7582e3d4cc8bec3b7f5a6c52b36880dcb57d7",
+    "test_file": "tests/test_black.py",
+    "description": "Process creation can raise OSError on restricted hosts; the fix falls back instead of crashing.",
+    "category": "reliability",
+    "construction": "Short, self-contained adaptation of the upstream fix reversed to reintroduce the documented bug; not an original upstream PR diff.",
+    "diff": "diff --git a/black.py b/black.py\n--- a/black.py\n+++ b/black.py\n@@ -1,9 +1,5 @@\n from concurrent.futures import ProcessPoolExecutor\n \n def reformat_many(worker_count):\n-    try:\n-        executor = ProcessPoolExecutor(max_workers=worker_count)\n-    except OSError:\n-        executor = None\n-    if executor is not None:\n-        executor.shutdown()\n+    executor = ProcessPoolExecutor(max_workers=worker_count)\n+    executor.shutdown()\n",
+    "files": {
+      "black.py": "from concurrent.futures import ProcessPoolExecutor\n\ndef reformat_many(worker_count):\n    executor = ProcessPoolExecutor(max_workers=worker_count)\n    executor.shutdown()\n"
+    },
+    "context": "The formatter should continue on hosts where ProcessPoolExecutor construction raises OSError (for example, restricted multiprocessing environments).",
+    "expected": [
+      {
+        "file_path": "black.py",
+        "line_start": 4,
+        "category": "reliability"
+      }
+    ]
+  },
+  {
+    "id": "cookiecutter-1",
+    "source": "BugsInPy reverse-fix adaptation",
+    "provenance": "https://github.com/soarsmu/BugsInPy/blob/master/projects/cookiecutter/bugs/1/bug_patch.txt",
+    "fixed_commit": "7f6804c4953a18386809f11faf4d86898570debc",
+    "test_file": "tests/test_generate_context.py",
+    "description": "JSON context files are UTF-8; the process locale may use another encoding.",
+    "category": "correctness",
+    "construction": "Short, self-contained adaptation of the upstream fix reversed to reintroduce the documented bug; not an original upstream PR diff.",
+    "diff": "diff --git a/cookiecutter/generate.py b/cookiecutter/generate.py\n--- a/cookiecutter/generate.py\n+++ b/cookiecutter/generate.py\n@@ -1,5 +1,5 @@\n import json\n \n def generate_context(context_file):\n-    with open(context_file, encoding=\"utf-8\") as file_handle:\n+    with open(context_file) as file_handle:\n         return json.load(file_handle)\n",
+    "files": {
+      "cookiecutter/generate.py": "import json\n\ndef generate_context(context_file):\n    with open(context_file) as file_handle:\n        return json.load(file_handle)\n"
+    },
+    "context": "A template JSON context file must be read as UTF-8 even when the machine default encoding differs.",
+    "expected": [
+      {
+        "file_path": "cookiecutter/generate.py",
+        "line_start": 4,
+        "category": "correctness"
+      }
+    ]
+  },
+  {
+    "id": "luigi-1",
+    "source": "BugsInPy reverse-fix adaptation",
+    "provenance": "https://github.com/soarsmu/BugsInPy/blob/master/projects/luigi/bugs/1/bug_patch.txt",
+    "fixed_commit": "aec5dc2ed8db53fc282a0bd24aabe59031b6d1ba",
+    "test_file": "test/server_test.py",
+    "description": "The collector configures the HTTP handler; the generated metrics payload does not.",
+    "category": "correctness",
+    "construction": "Short, self-contained adaptation of the upstream fix reversed to reintroduce the documented bug; not an original upstream PR diff.",
+    "diff": "diff --git a/luigi/server.py b/luigi/server.py\n--- a/luigi/server.py\n+++ b/luigi/server.py\n@@ -1,5 +1,5 @@\n def metrics_response(handler, metrics_collector):\n     metrics = metrics_collector.generate_latest()\n     if metrics:\n-        metrics_collector.configure_http_handler(handler)\n+        metrics.configure_http_handler(handler)\n         handler.write(metrics)\n",
+    "files": {
+      "luigi/server.py": "def metrics_response(handler, metrics_collector):\n    metrics = metrics_collector.generate_latest()\n    if metrics:\n        metrics.configure_http_handler(handler)\n        handler.write(metrics)\n"
+    },
+    "context": "generate_latest returns a metrics payload. configure_http_handler belongs to the metrics collector, and the handler writes the payload.",
+    "expected": [
+      {
+        "file_path": "luigi/server.py",
+        "line_start": 4,
+        "category": "correctness"
+      }
+    ]
+  },
+  {
+    "id": "tqdm-1",
+    "source": "BugsInPy reverse-fix adaptation",
+    "provenance": "https://github.com/soarsmu/BugsInPy/blob/master/projects/tqdm/bugs/1/bug_patch.txt",
+    "fixed_commit": "c0dcf39b046d1b4ff6de14ac99ad9a1b10487512",
+    "test_file": "tqdm/tests/tests_contrib.py",
+    "description": "start belongs to enumerate, not the progress bar constructor.",
+    "category": "correctness",
+    "construction": "Short, self-contained adaptation of the upstream fix reversed to reintroduce the documented bug; not an original upstream PR diff.",
+    "diff": "diff --git a/tqdm/contrib/__init__.py b/tqdm/contrib/__init__.py\n--- a/tqdm/contrib/__init__.py\n+++ b/tqdm/contrib/__init__.py\n@@ -1,2 +1,2 @@\n def tenumerate(iterable, start=0, tqdm_class=None, **kwargs):\n-    return enumerate(tqdm_class(iterable, **kwargs), start)\n+    return enumerate(tqdm_class(iterable, start, **kwargs))\n",
+    "files": {
+      "tqdm/contrib/__init__.py": "def tenumerate(iterable, start=0, tqdm_class=None, **kwargs):\n    return enumerate(tqdm_class(iterable, start, **kwargs))\n"
+    },
+    "context": "tenumerate(iterable, start=5) should yield indices starting at 5; the progress bar wraps the iterable.",
+    "expected": [
+      {
+        "file_path": "tqdm/contrib/__init__.py",
+        "line_start": 2,
+        "category": "correctness"
+      }
+    ]
+  },
+  {
+    "id": "clean-square",
+    "source": "synthetic negative control",
+    "description": "For numeric x, both expressions square x.",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def square(x):\n-    return x*x\n+    return x ** 2\n",
+    "files": {
+      "sample.py": "def square(x):\n    return x ** 2\n"
+    },
+    "context": "For numeric x, both expressions square x.",
+    "expected": []
+  },
+  {
+    "id": "clean-comparison",
+    "source": "synthetic negative control",
+    "description": "For numeric x, both comparisons are equivalent.",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def nonnegative(x):\n-    return x >= 0\n+    return 0 <= x\n",
+    "files": {
+      "sample.py": "def nonnegative(x):\n    return 0 <= x\n"
+    },
+    "context": "For numeric x, both comparisons are equivalent.",
+    "expected": []
+  }
+]

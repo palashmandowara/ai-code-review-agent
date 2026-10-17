@@ -5,6 +5,4 @@ __pycache__/
 .ruff_cache/
 *.db
 *.pyc
-.env.*
-!.env.example
-*.egg-info/
+results/
