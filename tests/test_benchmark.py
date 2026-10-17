@@ -34,3 +34,18 @@ def test_tool_diagnostics_use_case_source():
     result = asyncio.run(case_diagnostics({"files": {"example.py": "def f():\n    return missing\n"}}))
     findings = json.loads(result)[0]["findings"]
     assert any(item["code"] == "F821" for item in findings)
+
+
+def test_replay_jsonl_preserves_rejected_findings(tmp_path, capsys):
+    dataset = tmp_path / "cases.json"
+    dataset.write_text(json.dumps([{"id": "one", "diff": "diff --git a/a.py b/a.py\n+++ b/a.py\n@@ -0,0 +1 @@\n+bad\n",
+                                    "expected": [{"file_path": "a.py", "line_start": 1, "category": "correctness"}]}]))
+    replay = tmp_path / "saved.jsonl"
+    replay.write_text(json.dumps({"case": "one", "findings": [{"file_path": "a.py", "line_start": 1,
+        "line_end": 1, "title": "Defect", "severity": "high", "category": "API misuse",
+        "explanation": "wrong", "evidence": "bad"}], "model": {"rejected_findings": 1}}) + "\n")
+    asyncio.run(benchmark(dataset, "plain", replay))
+    result = json.loads(capsys.readouterr().out.splitlines()[-1])
+    assert (result["tp"], result["fp"], result["fn"]) == (1, 1, 0)
+    assert result["category_matches"] == 0
+    assert result["complete"] is True
