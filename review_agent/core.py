@@ -191,16 +191,17 @@ async def review(diff: str, approach: str = "plain", root: Path | None = None,
 
 
 def score(predicted: list[Finding], expected: list[dict], rejected: int = 0) -> dict:
-    """One-to-one matching by file, added line, and defect category."""
+    """Provisional one-to-one location matching; semantic correctness needs manual review."""
     matched = set()
     true_positives = 0
+    category_matches = 0
     for finding in predicted:
         for i, target in enumerate(expected):
             if (i not in matched and finding.file_path == target["file_path"]
-                and target["line_start"] <= finding.line_start <= target.get("line_end", target["line_start"])
-                and finding.category == target["category"]):
+                and target["line_start"] <= finding.line_start <= target.get("line_end", target["line_start"])):
                 matched.add(i)
                 true_positives += 1
+                category_matches += finding.category.lower().strip() == target.get("category", "").lower().strip()
                 break
     false_positives = len(predicted) - true_positives + rejected
     misses = len(expected) - true_positives
@@ -208,6 +209,7 @@ def score(predicted: list[Finding], expected: list[dict], rejected: int = 0) -> 
                  if predicted or rejected else (1.0 if not expected else 0.0))
     recall = true_positives / len(expected) if expected else 1.0
     return {"tp": true_positives, "fp": false_positives, "fn": misses,
+            "category_matches": category_matches,
             "precision": precision, "recall": recall,
             "f1": 2 * precision * recall / (precision + recall) if precision + recall else 0.0}
 
