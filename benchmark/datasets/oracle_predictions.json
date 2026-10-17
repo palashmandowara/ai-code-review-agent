@@ -1,0 +1,91 @@
+{
+  "boundary-001": [
+    {
+      "file_path": "sample.py",
+      "line_start": 2,
+      "category": "correctness",
+      "line_end": 2,
+      "title": "Verified defect",
+      "severity": "medium",
+      "explanation": "Changed inclusive boundary excludes the last valid index",
+      "evidence": "changed line"
+    }
+  ],
+  "clean-001": [],
+  "boundary-002": [
+    {
+      "file_path": "sample.py",
+      "line_start": 2,
+      "category": "correctness",
+      "line_end": 2,
+      "title": "Verified defect",
+      "severity": "medium",
+      "explanation": "Rejects the minimum bound",
+      "evidence": "changed line"
+    }
+  ],
+  "null-001": [
+    {
+      "file_path": "sample.py",
+      "line_start": 2,
+      "category": "reliability",
+      "line_end": 2,
+      "title": "Verified defect",
+      "severity": "medium",
+      "explanation": "Null user now raises",
+      "evidence": "changed line"
+    }
+  ],
+  "division-001": [
+    {
+      "file_path": "sample.py",
+      "line_start": 2,
+      "category": "reliability",
+      "line_end": 2,
+      "title": "Verified defect",
+      "severity": "medium",
+      "explanation": "Zero count now raises",
+      "evidence": "changed line"
+    }
+  ],
+  "auth-001": [
+    {
+      "file_path": "sample.py",
+      "line_start": 2,
+      "category": "security",
+      "line_end": 2,
+      "title": "Verified defect",
+      "severity": "medium",
+      "explanation": "Authorization bypass",
+      "evidence": "changed line"
+    }
+  ],
+  "state-001": [
+    {
+      "file_path": "sample.py",
+      "line_start": 2,
+      "category": "correctness",
+      "line_end": 2,
+      "title": "Verified defect",
+      "severity": "medium",
+      "explanation": "Completes before approval",
+      "evidence": "changed line"
+    }
+  ],
+  "cleanup-001": [
+    {
+      "file_path": "sample.py",
+      "line_start": 2,
+      "category": "reliability",
+      "line_end": 2,
+      "title": "Verified defect",
+      "severity": "medium",
+      "explanation": "File no longer closed deterministically",
+      "evidence": "changed line"
+    }
+  ],
+  "clean-002": [],
+  "clean-003": [],
+  "clean-004": [],
+  "clean-005": []
+}

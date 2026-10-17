@@ -1,0 +1,108 @@
+[
+  {
+    "id": "boundary-001",
+    "source": "synthetic",
+    "category": "correctness",
+    "description": "Changed inclusive boundary excludes the last valid index",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def valid(index, items):\n-    return index <= len(items) - 1\n+    return index < len(items) - 1\n",
+    "expected": [
+      {
+        "file_path": "sample.py",
+        "line_start": 2,
+        "category": "correctness"
+      }
+    ]
+  },
+  {
+    "id": "clean-001",
+    "source": "synthetic",
+    "category": "negative-control",
+    "description": "Equivalent refactor",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def double(x):\n-    return x + x\n+    return 2 * x\n",
+    "expected": []
+  },
+  {
+    "id": "boundary-002",
+    "source": "synthetic",
+    "category": "correctness",
+    "description": "Rejects the minimum bound",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def in_range(x, minimum, maximum):\n-    return minimum <= x < maximum\n+    return minimum < x < maximum\n",
+    "expected": [
+      {
+        "file_path": "sample.py",
+        "line_start": 2,
+        "category": "correctness"
+      }
+    ]
+  },
+  {
+    "id": "null-001",
+    "source": "synthetic",
+    "category": "reliability",
+    "description": "Null user now raises",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def username(user):\n-    return user[\"name\"] if user else \"guest\"\n+    return user[\"name\"]\n",
+    "expected": [
+      {
+        "file_path": "sample.py",
+        "line_start": 2,
+        "category": "reliability"
+      }
+    ]
+  },
+  {
+    "id": "division-001",
+    "source": "synthetic",
+    "category": "reliability",
+    "description": "Zero count now raises",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def average(total, count):\n-    return total / count if count else 0\n+    return total / count\n",
+    "expected": [
+      {
+        "file_path": "sample.py",
+        "line_start": 2,
+        "category": "reliability"
+      }
+    ]
+  },
+  {
+    "id": "auth-001",
+    "source": "synthetic",
+    "category": "security",
+    "description": "Authorization bypass",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def can_delete(actor, owner):\n-    return actor.id == owner.id\n+    return True\n",
+    "expected": [
+      {
+        "file_path": "sample.py",
+        "line_start": 2,
+        "category": "security"
+      }
+    ]
+  },
+  {
+    "id": "state-001",
+    "source": "synthetic",
+    "category": "correctness",
+    "description": "Completes before approval",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def advance(state):\n-    return \"done\" if state == \"approved\" else state\n+    return \"done\" if state == \"pending\" else state\n",
+    "expected": [
+      {
+        "file_path": "sample.py",
+        "line_start": 2,
+        "category": "correctness"
+      }
+    ]
+  },
+  {
+    "id": "cleanup-001",
+    "source": "synthetic",
+    "category": "reliability",
+    "description": "File no longer closed deterministically",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def read_file(path):\n-    with open(path) as stream: return stream.read()\n+    stream = open(path); return stream.read()\n",
+    "expected": [
+      {
+        "file_path": "sample.py",
+        "line_start": 2,
+        "category": "reliability"
+      }
+    ]
+  }
+]

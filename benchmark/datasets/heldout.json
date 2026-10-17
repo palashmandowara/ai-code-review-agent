@@ -1,0 +1,34 @@
+[
+  {
+    "id": "clean-002",
+    "source": "synthetic",
+    "category": "negative-control",
+    "description": "Equivalent arithmetic",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def square(x):\n-    return x*x\n+    return x ** 2\n",
+    "expected": []
+  },
+  {
+    "id": "clean-003",
+    "source": "synthetic",
+    "category": "negative-control",
+    "description": "Equivalent for list input",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def is_empty(items):\n-    return len(items) == 0\n+    return not items\n",
+    "expected": []
+  },
+  {
+    "id": "clean-004",
+    "source": "synthetic",
+    "category": "negative-control",
+    "description": "Equivalent formatting",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def greeting(name):\n-    return \"Hi \" + name\n+    return f\"Hi {name}\"\n",
+    "expected": []
+  },
+  {
+    "id": "clean-005",
+    "source": "synthetic",
+    "category": "negative-control",
+    "description": "Equivalent comparison",
+    "diff": "diff --git a/sample.py b/sample.py\n--- a/sample.py\n+++ b/sample.py\n@@ -1,2 +1,2 @@\n def valid(x):\n-    return x >= 0\n+    return 0 <= x\n",
+    "expected": []
+  }
+]
