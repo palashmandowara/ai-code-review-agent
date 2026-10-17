@@ -61,3 +61,15 @@ def test_pilot_labels_and_black_work_are_present():
         for label in case["expected"]:
             assert label["line_start"] in locations[label["file_path"]]
         assert set(case["files"]) == set(locations)
+
+
+def test_canonical_digest_ignores_checkout_line_endings(tmp_path, capsys):
+    summaries = []
+    (tmp_path / "predictions.json").write_text("{}")
+    for ending in ("\n", "\r\n"):
+        dataset = tmp_path / "cases.json"
+        dataset.write_bytes(("[" + ending + "]" + ending).encode())
+        asyncio.run(benchmark(dataset, "plain", tmp_path / "predictions.json"))
+        summaries.append(json.loads(capsys.readouterr().out.splitlines()[-1]))
+    assert summaries[0]["dataset_sha256"] != summaries[1]["dataset_sha256"]
+    assert summaries[0]["dataset_canonical_sha256"] == summaries[1]["dataset_canonical_sha256"]
