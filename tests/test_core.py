@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from review_agent.core import Finding, changed_lines, safe_context, score, validate_findings
+from review_agent.core import Finding, changed_lines, response_format_for, safe_context, score, validate_findings
 
 DIFF = "diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n@@ -1,2 +1,3 @@\n a=1\n+b=2\n c=3\n"
 
@@ -20,6 +20,16 @@ def test_invalid_location_counts_as_false_positive():
     metadata = {}
     accepted = validate_findings([finding(1)], DIFF, metadata)
     assert score(accepted, [], metadata["rejected_findings"])["fp"] == 1
+    assert metadata["rejected_details"][0]["reason"] == "start_not_added_line"
+
+
+def test_groq_strict_schema_and_generic_fallback():
+    strict = response_format_for("https://api.groq.com/openai/v1/chat/completions", "openai/gpt-oss-20b")
+    schema = strict["json_schema"]["schema"]
+    assert strict["json_schema"]["strict"] is True
+    assert schema["required"] == ["findings"]
+    assert schema["properties"]["findings"]["items"]["additionalProperties"] is False
+    assert response_format_for("https://example.com/v1/chat/completions", "other") == {"type": "json_object"}
 
 
 def test_score_positive_and_negative():
