@@ -28,8 +28,8 @@ On Windows, from the project directory with `.env` set to `REVIEW_MODE=model` an
 $projectPath = (Get-Location).Path
 New-Item -ItemType Directory results -Force | Out-Null
 foreach ($approach in 'plain','context','tool') {
-    docker compose run --rm -v "${projectPath}:/app/project:ro" worker `
-        python -m review_agent.cli benchmark /app/project/benchmark/datasets/pilot.json `
+    docker compose run --rm -v "${projectPath}/benchmark:/app/benchmark:ro" worker `
+        python -m review_agent.cli benchmark /app/benchmark/datasets/pilot.json `
         --approach $approach | Tee-Object "results/pilot-$approach.jsonl"
 }
 ```
