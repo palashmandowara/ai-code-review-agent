@@ -28,6 +28,8 @@ Check the evaluation code offline with `review-agent benchmark benchmark/dataset
 
 A six-case sourced pilot is in `benchmark/datasets/pilot.json`: four adapted regressions from documented BugsInPy fixes and two synthetic clean controls. It is a workflow demonstration, not a held-out performance benchmark. See [`docs/evaluation.md`](docs/evaluation.md) for provenance, limitations, and Windows commands to run all three approaches with a configured model.
 
+The first Groq pilot results, including the rejected-location case and interpretation limits, are in [`docs/pilot-results.md`](docs/pilot-results.md).
+
 ## Deployment
 
 Docker Compose supplies PostgreSQL and Redis for local development. Production needs managed database/queue, HTTPS reverse proxy, secret management, backups, and monitoring. No AWS resources are provisioned by this repository.
