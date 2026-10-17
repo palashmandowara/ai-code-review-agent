@@ -8,7 +8,7 @@ Before a real experiment, gather independently verified bug-fix commits, retain 
 
 ## Matching
 
-A finding matches one expected defect only if its file path, category, and added line fall within the expected line range. One expected defect can match at most one prediction. Invalid locations, malformed findings, and duplicates count as false positives; a failed model call counts as a failed case, not a clean review. Review the semantic rationale manually before treating numerical matches as true defects in any published results.
+A finding provisionally matches one expected defect if its file path and added line fall within the expected line range. One expected defect can match at most one prediction. Category wording is recorded as a separate exact-match count, since providers use different labels for the same bug. Invalid locations, malformed findings, and duplicates count as false positives; a failed model call counts as a failed case, not a clean review. Location matching alone can count an unrelated issue on the same line, so inspect the semantic rationale manually before treating numerical matches as true defects in any published results.
 
 ## Comparison
 
@@ -34,4 +34,4 @@ foreach ($approach in 'plain','context','tool') {
 }
 ```
 
-Check each final JSON line for `"complete": true` before comparing scores. Inspect individual findings and failures manually. Never count the deterministic `REVIEW_MODE=demo` as an AI result. For a defensible future evaluation, curate more upstream patches and clean real changes, review licenses and labels independently, freeze a separate held-out set, and rerun with a fixed model version.
+Check each final JSON line for `"complete": true` before comparing scores. Inspect individual findings and failures manually. To rescore a saved JSONL run after a scoring change without model calls, use `--predictions results/pilot-plain.jsonl`; the replay preserves rejected-finding counts but has no original latency or token-cost measurement. Never count the deterministic `REVIEW_MODE=demo` as an AI result. For a defensible future evaluation, curate more upstream patches and clean real changes, review licenses and labels independently, freeze a separate held-out set, and rerun with a fixed model version.

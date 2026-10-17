@@ -32,8 +32,22 @@ async def case_diagnostics(case: dict) -> str:
 async def benchmark(path: Path, approach: str, predictions_path: Path | None = None):
     dataset_bytes = path.read_bytes()
     cases = json.loads(dataset_bytes)
-    predictions = json.loads(predictions_path.read_text()) if predictions_path else None
-    totals = {"tp": 0, "fp": 0, "fn": 0}
+    predictions = None
+    saved_rejected = {}
+    if predictions_path:
+        source = predictions_path.read_text()
+        try:
+            predictions = json.loads(source)
+            if isinstance(predictions, dict) and "case" in predictions and "findings" in predictions:
+                row = predictions
+                predictions = {row["case"]: row["findings"]}
+                saved_rejected = {row["case"]: row.get("model", {}).get("rejected_findings", 0)}
+        except json.JSONDecodeError:
+            rows = [json.loads(line) for line in source.splitlines() if line.strip()]
+            predictions = {row["case"]: row["findings"] for row in rows if "case" in row and "findings" in row}
+            saved_rejected = {row["case"]: row.get("model", {}).get("rejected_findings", 0)
+                              for row in rows if "case" in row and "findings" in row}
+    totals = {"tp": 0, "fp": 0, "fn": 0, "category_matches": 0}
     durations = []
     failures = []
     costs = []
@@ -51,7 +65,10 @@ async def benchmark(path: Path, approach: str, predictions_path: Path | None = N
                 if metadata.get("model"):
                     models.add(metadata["model"])
             else:
+                if case["id"] not in predictions:
+                    raise ValueError("Saved predictions missing this case")
                 findings = validate_findings(predictions.get(case["id"], []), case["diff"], metadata)
+                metadata["rejected_findings"] += saved_rejected.get(case["id"], 0)
             metrics = score(findings, case["expected"], metadata.get("rejected_findings", 0))
             for key in totals:
                 totals[key] += metrics[key]
@@ -72,11 +89,13 @@ async def benchmark(path: Path, approach: str, predictions_path: Path | None = N
         "precision": precision if complete else None, "recall": recall if complete else None,
         "f1": (2 * precision * recall / (precision + recall) if precision + recall else 0) if complete else None,
         "false_positives_per_case": fp / len(cases) if complete and cases else None,
-        "median_seconds": statistics.median(durations) if durations else None,
-        "p95_seconds": sorted(durations)[min(len(durations) - 1, int(len(durations) * .95))] if durations else None,
+        "median_seconds": statistics.median(durations) if durations and predictions is None else None,
+        "p95_seconds": (sorted(durations)[min(len(durations) - 1, int(len(durations) * .95))]
+                        if durations and predictions is None else None),
         "estimated_total_usd": round(sum(costs), 6) if predictions is None else None,
         "dataset_sha256": hashlib.sha256(dataset_bytes).hexdigest(),
         "review_mode": os.getenv("REVIEW_MODE", "model") if predictions is None else "replay",
+        "metric": "provisional_location_match_requires_semantic_review",
         "models": sorted(models),
         "failures": failures}))
 
