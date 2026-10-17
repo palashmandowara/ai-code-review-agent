@@ -32,6 +32,12 @@ The first Groq pilot results, including the rejected-location case and interpret
 
 ## Deployment
 
-Docker Compose supplies PostgreSQL and Redis for local development. Production needs managed database/queue, HTTPS reverse proxy, secret management, backups, and monitoring. No AWS resources are provisioned by this repository.
+### Free hosted review on this repository
+
+The `Live AI review` GitHub Actions workflow runs the existing `plain` reviewer on owner/collaborator pull requests. It needs no always-on machine, Redis, database, Smee tunnel, or GitHub App private key. In this repository, create an Actions repository secret named `GROQ_API_KEY` containing your Groq API key (Settings → Secrets and variables → Actions → New repository secret). The workflow provides its own short-lived `GITHUB_TOKEN` and posts a review to each new PR commit. It reads PR diffs through GitHub's API and installs code from the trusted default branch; it never checks out or runs submitted PR code. A large diff (>30,000 characters) is skipped. Review the Actions log for errors or skipped PRs. The workflow is intentionally restricted to owner, member, or collaborator PRs to limit free-tier usage. Never commit API keys or paste them into issue/PR text.
+
+GitHub-hosted standard runners are free for public repositories; private repositories have included free minutes subject to the account's quota. Groq's free plan has rate limits. A GitHub Actions run is the hosted review deployment, not a continuously running HTTP endpoint. The original GitHub App integration still runs with Docker Compose locally; it is not hosted by this workflow.
+
+Docker Compose supplies PostgreSQL and Redis for local development. Hosting that webhook service continuously requires a VM or managed database/queue, HTTPS reverse proxy, secret management, backups, and monitoring. No AWS resources are provisioned by this repository.
 
 See [`docs/evaluation.md`](docs/evaluation.md) for the experiment protocol and [`docs/security.md`](docs/security.md) for operational limits. This repository creates tables on first startup and does not yet include migrations; for an existing development database created by an earlier version, back it up and recreate it before running the new schema.
