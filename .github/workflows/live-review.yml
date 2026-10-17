@@ -1,0 +1,36 @@
+name: Live AI review
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+  pull-requests: write
+concurrency:
+  group: review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  review:
+    if: >-
+      github.event.pull_request.author_association == 'OWNER' ||
+      github.event.pull_request.author_association == 'MEMBER' ||
+      github.event.pull_request.author_association == 'COLLABORATOR'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Only trusted base-branch code is installed. Never checkout or execute PR code.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install .
+      - name: Review pull request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LLM_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          LLM_API_URL: https://api.groq.com/openai/v1/chat/completions
+          LLM_MODEL: openai/gpt-oss-20b
+          REVIEW_MODE: model
+        run: python -m review_agent.actions
