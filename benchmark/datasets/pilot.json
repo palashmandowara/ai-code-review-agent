@@ -8,11 +8,11 @@
     "description": "Process creation can raise OSError on restricted hosts; the fix falls back instead of crashing.",
     "category": "reliability",
     "construction": "Short, self-contained adaptation of the upstream fix reversed to reintroduce the documented bug; not an original upstream PR diff.",
-    "diff": "diff --git a/black.py b/black.py\n--- a/black.py\n+++ b/black.py\n@@ -1,9 +1,5 @@\n from concurrent.futures import ProcessPoolExecutor\n \n def reformat_many(worker_count):\n-    try:\n-        executor = ProcessPoolExecutor(max_workers=worker_count)\n-    except OSError:\n-        executor = None\n-    if executor is not None:\n-        executor.shutdown()\n+    executor = ProcessPoolExecutor(max_workers=worker_count)\n+    executor.shutdown()\n",
+    "diff": "diff --git a/black.py b/black.py\n--- a/black.py\n+++ b/black.py\n@@ -1,13 +1,9 @@\n from concurrent.futures import ProcessPoolExecutor\n \n def reformat_many(worker_count, loop, sources):\n-    try:\n-        executor = ProcessPoolExecutor(max_workers=worker_count)\n-    except OSError:\n-        executor = None\n+    executor = ProcessPoolExecutor(max_workers=worker_count)\n     try:\n         loop.run_until_complete(schedule_formatting(sources, loop, executor))\n     finally:\n         shutdown(loop)\n-        if executor is not None:\n-            executor.shutdown()\n+        executor.shutdown()\n",
     "files": {
-      "black.py": "from concurrent.futures import ProcessPoolExecutor\n\ndef reformat_many(worker_count):\n    executor = ProcessPoolExecutor(max_workers=worker_count)\n    executor.shutdown()\n"
+      "black.py": "from concurrent.futures import ProcessPoolExecutor\n\ndef reformat_many(worker_count, loop, sources):\n    executor = ProcessPoolExecutor(max_workers=worker_count)\n    try:\n        loop.run_until_complete(schedule_formatting(sources, loop, executor))\n    finally:\n        shutdown(loop)\n        executor.shutdown()\n"
     },
-    "context": "The formatter should continue on hosts where ProcessPoolExecutor construction raises OSError (for example, restricted multiprocessing environments).",
+    "context": "The formatter schedules work with the executor through schedule_formatting. On hosts where ProcessPoolExecutor construction raises OSError, the upstream fix falls back to None and only shuts down a created executor.",
     "expected": [
       {
         "file_path": "black.py",
