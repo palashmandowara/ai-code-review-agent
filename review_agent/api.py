@@ -72,3 +72,17 @@ async def webhook(request: Request):
             db.commit()
             raise HTTPException(503, "Queue unavailable")
         return {"status": "queued", "run_id": run.id}
+
+
+
+# Mount last so API and webhook routes retain precedence.
+from pathlib import Path  # noqa: E402
+
+from fastapi.staticfiles import StaticFiles  # noqa: E402
+
+from .dashboard import router as dashboard_router  # noqa: E402
+
+app.include_router(dashboard_router)
+static_dir = Path(__file__).parent / "static"
+if static_dir.is_dir():
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="dashboard")

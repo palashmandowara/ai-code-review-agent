@@ -41,3 +41,54 @@ GitHub-hosted standard runners are free for public repositories; private reposit
 Docker Compose supplies PostgreSQL and Redis for local development. Hosting that webhook service continuously requires a VM or managed database/queue, HTTPS reverse proxy, secret management, backups, and monitoring. No AWS resources are provisioned by this repository.
 
 See [`docs/evaluation.md`](docs/evaluation.md) for the experiment protocol and [`docs/security.md`](docs/security.md) for operational limits. This repository creates tables on first startup and does not yet include migrations; for an existing development database created by an earlier version, back it up and recreate it before running the new schema.
+
+
+## Review dashboard
+
+The React + TypeScript dashboard is served by FastAPI at `/` after the frontend is built.
+It includes searchable review history (latest 100), findings with evidence, manual diff reviews,
+and a clearly labeled view of the published six-case pilot. GitHub history reads the same
+review/finding tables as the worker. The GitHub Actions-only reviewer does not write to this database.
+
+### Run with Docker
+
+Set a long random `DASHBOARD_TOKEN` in `.env` (for example, generate one with
+`python -c "import secrets; print(secrets.token_urlsafe(32))"`), then run:
+
+```sh
+docker compose up --build
+```
+
+Open `http://localhost:8000` and enter that token. The UI keeps it in memory only.
+Use HTTPS when hosting beyond localhost. Dashboard endpoints are disabled if the token is missing;
+this is a single-workspace shared-token dashboard, not a multi-user authentication system.
+
+### Frontend development
+
+```sh
+cd frontend
+npm ci
+npm run dev
+```
+
+Run `uvicorn review_agent.api:app --reload` separately at port 8000 with
+`DASHBOARD_TOKEN`, `DATABASE_URL`, and model variables exported in its environment.
+Vite proxies `/api` to port 8000. For a single-server build, run `npm run build` in
+`frontend`, then start/restart FastAPI. Python package data includes the generated assets.
+Docker builds the frontend automatically; generated bundles and node_modules are not committed.
+
+Manual reviews accept unified diffs up to 30,000 characters with optional supplied context
+(up to 12,000 characters). They call the configured model provider, persist the diff and findings
+in a new `manual_review_runs` table, and **never post to GitHub**. Tool-assisted manual reviews
+are intentionally unavailable without source files; use the existing GitHub App or benchmark CLI.
+Requests run synchronously with the existing provider timeout; keep the page open until completion.
+A process crash can leave a manual run marked running. This version does not include recovery or deletion UI.
+Existing GitHub runs do not store a diff, so their detail screen links back to the PR.
+Set `REVIEW_MODE=demo` for the deterministic authorization fixture; the UI explicitly labels demo output.
+Pilot cards are a static transcription of `docs/pilot-results.md`, not live benchmark execution.
+
+Dashboard API (all require `Authorization: Bearer <DASHBOARD_TOKEN>`):
+
+- `GET /api/dashboard/runs`: latest review summaries.
+- `GET /api/dashboard/runs/{github-N|manual-N}`: findings and available diff.
+- `POST /api/dashboard/reviews`: `{title, diff, approach: "plain" | "context", context}`.
