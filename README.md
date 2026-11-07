@@ -9,6 +9,17 @@ pretending that a correct line number proves a correct bug report.
 exploratory, not a general accuracy benchmark. Public hosting and current remote CI must
 be verified separately. See [release status](docs/release-status.md).
 
+## Project at a glance
+
+**Python · FastAPI · React · TypeScript · PostgreSQL · Redis/RQ · Docker · GitHub App**
+
+Built to help a developer inspect a pull request: the service turns a diff into structured
+bug reports with file/line references and evidence, validates their locations, and publishes
+inline feedback. The dashboard makes review results and failures inspectable.
+
+**Reviewer shortcuts:** [Architecture](docs/architecture.md) · [Five-minute demo](docs/demo.md) ·
+[Evaluation](docs/evaluation.md) · [Validation and release status](docs/release-status.md)
+
 ## What it does
 
 - Reviews changed lines using plain prompting, repository context, or context plus Ruff.
@@ -22,13 +33,43 @@ be verified separately. See [release status](docs/release-status.md).
 It does not autonomously fix code, merge PRs, or guarantee bug detection. Repository
 retrieval is a bounded filename heuristic, not semantic search or a caller graph.
 
+## How a review flows
+
+```mermaid
+flowchart TD
+  G[Signed GitHub webhook] --> A[FastAPI]
+  U[Dashboard manual diff] --> A
+  A --> D[(Runs and SQL outbox)]
+  D --> Q[Dispatcher and Redis queue]
+  Q --> W[Review worker]
+  W --> V[Structured findings and validation]
+  V --> D
+  V --> C[GitHub inline comments]
+  D --> U
+```
+
+Manual reviews return findings to the dashboard; only GitHub-triggered reviews publish
+comments. Before publishing, the worker checks that the PR is still open and its head
+commit has not changed.
+
+| Configuration | Input | Purpose |
+| --- | --- | --- |
+| Plain | Pull request diff | Establish a minimal review baseline |
+| Context | Diff and bounded repository context | Supply nearby implementation details |
+| Tool | Diff, context, and Ruff diagnostics | Add static analysis evidence |
+
+Manual review supports plain or supplied context. Tool mode is part of the repository
+review pipeline. These are review configurations, not three independently trained models.
+
 ## Quick start: local demo
 
 Requires Docker with Compose. Copy `.env.example` to `.env`, generate a random token with
 `python -c "import secrets; print(secrets.token_urlsafe(32))"`, and set it as `DASHBOARD_TOKEN`.
-Then:
+From a clone of this repository:
 
 ```sh
+cp .env.example .env
+# Edit .env and set DASHBOARD_TOKEN before starting.
 docker compose up --build
 ```
 
@@ -135,3 +176,66 @@ mode. Use trusted repositories, HTTPS, and restricted network access. Keep keys 
 Tables are created additively; this release adds `manual_review_runs` and `review_outbox`
 without changing existing columns. It does not provide a general schema migration engine.
 Back up existing databases before upgrades. No cloud resources are provisioned automatically.
+
+## Engineering decisions
+
+- **Persist before acknowledging:** the run and outbox entry share a SQL transaction,
+  so a temporary queue outage does not discard an accepted review.
+- **Validate before publishing:** findings must reference added lines; duplicate findings
+  are filtered, and stale PR heads are checked again before comments are posted.
+- **Make failures visible:** queued/running/failed states, bounded retries, and explicit
+  retry controls help diagnose a run instead of hiding it behind a successful HTTP response.
+- **Separate correctness from model quality:** executable fixtures verify known defects;
+  human adjudication determines whether a model finding actually explains the defect.
+- **Keep execution bounded:** submitted repository code is not executed, context is bounded,
+  and oversized diffs are rejected or skipped explicitly.
+
+## Validation evidence
+
+The implementation was checked locally on 7 November 2026:
+
+| Check | Recorded result | Scope |
+| --- | --- | --- |
+| Python tests | 55 passed | Backend, job lifecycle, validation, evaluation, mocked integration |
+| Ruff | Passed | Python lint |
+| TypeScript/Vite | Production build passed | Frontend type checking and bundle |
+| Playwright | 3 passed | Authentication rejection, queued demo/history, mobile layout |
+| npm audit | 0 reported vulnerabilities at validation time | Installed frontend dependency graph |
+| Executable development dataset | 12 cases | 8 injected defects and 4 clean controls |
+
+These are local results, not a green remote CI badge. GitHub Actions currently reports a
+startup failure before creating jobs; Docker execution and a fresh live App/model run
+remain unverified. The [evidence ledger](docs/release-status.md) tracks these release gates.
+The six-case pilot is exploratory; no general accuracy percentage is claimed here.
+
+## Repository guide
+
+| Path | Contents |
+| --- | --- |
+| `review_agent/core.py` | Review prompts, structured findings, diff validation |
+| `review_agent/api.py` | Signed webhook intake and health endpoints |
+| `review_agent/jobs.py` | Outbox dispatch, worker execution, reconciliation |
+| `review_agent/github.py` | GitHub App integration and comment publication |
+| `review_agent/dashboard.py` | Authenticated history, detail, manual review, retry APIs |
+| `review_agent/evaluation.py` | Hash-bound human adjudication |
+| `frontend/` | React dashboard and browser tests |
+| `tests/` | Backend tests and executable defect fixtures |
+| `benchmark/datasets/` | Development fixtures and exploratory pilot data |
+| `docs/` | Architecture, deployment, evaluation, security, and demo guides |
+
+## Resume and interview
+
+**AI Code Review Agent — Python, FastAPI, React, PostgreSQL, Redis, Docker**
+
+- Built a GitHub-integrated LLM code review service with signed webhooks, structured
+  findings, changed-line validation, and inline pull request comments.
+- Developed a React/TypeScript dashboard for review history and queued manual reviews,
+  backed by a SQL outbox, Redis/RQ workers, failure recovery, and retry controls.
+- Added 55 backend tests, 3 browser checks, and an evaluation workflow with executable
+  defect fixtures and hash-bound human adjudication across three review configurations.
+
+Use these implementation claims for a portfolio project you can explain and demonstrate.
+Do not describe it as production-deployed or add accuracy/user-impact figures without
+supporting evidence. The [demo guide](docs/demo.md) provides a walkthrough. The repositories
+are private, so a resume link alone will not give a recruiter access; arrange a private
+walkthrough or publish a reviewed, sanitized version separately.

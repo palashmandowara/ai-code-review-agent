@@ -14,7 +14,7 @@ This is an evidence ledger, not a production-readiness claim.
 | Evaluation | Hash-bound, human-adjudicated semantic scoring | Implemented and tested |
 | Model experiment | Existing six-case pilot only | No new model results claimed |
 | Docker | Compose health gates, init, persistent volumes, non-root image, CI smoke job | Engine unavailable locally; remote verification required |
-| Remote CI | Earlier branch runs fail at startup before jobs | Cause not exposed by connector; must verify new run |
+| Remote CI | Latest checked branch run `42368390146` failed at startup with no jobs; GitHub rejected retry with HTTP 403 | Diagnostic unavailable through connector; remote CI remains blocked |
 | Deployment | Local/private-server instructions and recovery guide | No public host provisioned |
 | Visibility | Repositories remain private | Owner decision and secret/history audit needed before publication |
 
