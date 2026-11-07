@@ -5,9 +5,19 @@ structured findings, and posts inline comments. A React dashboard shows review h
 findings, and queued manual diff reviews. An evaluation harness measures results without
 pretending that a correct line number proves a correct bug report.
 
+This is a portfolio project demonstrating a complete review pipeline: GitHub webhook →
+durable SQL outbox → Redis/RQ worker → model finding validation → inline pull-request
+comment → dashboard history. The repository includes a deterministic demo, a real-model
+integration path, and an end-to-end GitHub App verification record.
+
 **Status:** working portfolio MVP under active hardening. The six-case model pilot is
 exploratory, not a general accuracy benchmark. Public hosting and current remote CI must
 be verified separately. See [release status](docs/release-status.md).
+
+**Live integration verified:** a fresh draft PR in the test repository was reviewed by the
+installed GitHub App; the model identified an unconditional delete-permission bug, the App
+posted an inline comment on the changed line, and the dashboard stored the matching review.
+The test PR remains open and unmerged.
 
 ## Project at a glance
 
