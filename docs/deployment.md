@@ -44,7 +44,8 @@ on a deployment you want to keep; that removes persistent volumes.
   to the App database. Use the GitHub App path for a unified dashboard demo.
 - **GitHub CI startup_failure with no jobs:** inspect the run page's workflow annotations
   and account/repository Actions settings. Do not interpret this as a failing pytest run.
-  The connector did not reveal a specific startup diagnostic during this implementation.
+  For run `42368390146`, the owner reported an account billing issue. Billing remains
+  an owner-controlled blocker.
 
 ## Upgrade
 

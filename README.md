@@ -215,9 +215,12 @@ The implementation was checked locally on 7 November 2026:
 | npm audit | 0 reported vulnerabilities at validation time | Installed frontend dependency graph |
 | Executable development dataset | 12 cases | 8 injected defects and 4 clean controls |
 
-These are local results, not a green remote CI badge. GitHub Actions currently reports a
-startup failure before creating jobs; Docker execution and a fresh live App/model run
-remain unverified. The [evidence ledger](docs/release-status.md) tracks these release gates.
+These are local results, not a green remote CI badge. Compose startup, a queued demo finding,
+and history after service restart were verified locally. One real model review completed
+with a finding on the same authorization example; this is not an accuracy benchmark.
+GitHub Actions is blocked by an account billing issue. A fresh private test PR produced a
+real-model inline comment and matching dashboard record through a temporary HTTPS tunnel;
+persistent hosting remains unverified. The [evidence ledger](docs/release-status.md) tracks these gates.
 The six-case pilot is exploratory; no general accuracy percentage is claimed here.
 
 ## Repository guide
