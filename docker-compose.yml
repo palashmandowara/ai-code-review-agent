@@ -1,20 +1,41 @@
+x-app: &app
+  build: .
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql+psycopg://review:review@db:5432/review
+    REDIS_URL: redis://redis:6379/0
+  depends_on:
+    init:
+      condition: service_completed_successfully
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
 services:
+  init:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://review:review@db:5432/review
+    command: python -c "from review_agent.storage import session_factory; session_factory()"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
   api:
-    build: .
-    ports: ["8000:8000"]
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql+psycopg://review:review@db:5432/review
-      REDIS_URL: redis://redis:6379/0
-    depends_on: [db, redis]
+    <<: *app
+    ports: ["127.0.0.1:8000:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready')"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
   worker:
-    build: .
+    <<: *app
     command: rq worker reviews --url redis://redis:6379/0 --with-scheduler
-    env_file: .env
-    environment:
-      DATABASE_URL: postgresql+psycopg://review:review@db:5432/review
-      REDIS_URL: redis://redis:6379/0
-    depends_on: [db, redis]
+    stop_grace_period: 330s
+  dispatcher:
+    <<: *app
+    command: python -m review_agent.jobs
   db:
     image: postgres:16
     environment:
@@ -22,7 +43,22 @@ services:
       POSTGRES_PASSWORD: review
       POSTGRES_DB: review
     volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U review -d review"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
   redis:
     image: redis:7
+    command: redis-server --appendonly yes
+    volumes: ["redisdata:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
 volumes:
   pgdata:
+  redisdata:

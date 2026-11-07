@@ -1,0 +1,202 @@
+[
+  {
+    "id": "expiry_boundary",
+    "source": "project-authored synthetic development fixture",
+    "split": "development",
+    "verification": "tests/test_verified_dataset.py",
+    "diff": "diff --git a/expiry_boundary.py b/expiry_boundary.py\n--- a/expiry_boundary.py\n+++ b/expiry_boundary.py\n@@ -1,2 +1,2 @@\n def check(now, expires_at):\n-    return now < expires_at\n+    return now <= expires_at\n",
+    "files": {
+      "expiry_boundary.py": "def check(now, expires_at):\n    return now <= expires_at\n"
+    },
+    "context": "A token is invalid when now equals expires_at.",
+    "expected": [
+      {
+        "file_path": "expiry_boundary.py",
+        "line_start": 2,
+        "category": "security",
+        "rationale": "A token is invalid when now equals expires_at."
+      }
+    ]
+  },
+  {
+    "id": "owner_authorization",
+    "source": "project-authored synthetic development fixture",
+    "split": "development",
+    "verification": "tests/test_verified_dataset.py",
+    "diff": "diff --git a/owner_authorization.py b/owner_authorization.py\n--- a/owner_authorization.py\n+++ b/owner_authorization.py\n@@ -1,2 +1,2 @@\n def check(actor, owner):\n-    return actor == owner\n+    return True\n",
+    "files": {
+      "owner_authorization.py": "def check(actor, owner):\n    return True\n"
+    },
+    "context": "Only the resource owner may delete it.",
+    "expected": [
+      {
+        "file_path": "owner_authorization.py",
+        "line_start": 2,
+        "category": "security",
+        "rationale": "Only the resource owner may delete it."
+      }
+    ]
+  },
+  {
+    "id": "empty_average",
+    "source": "project-authored synthetic development fixture",
+    "split": "development",
+    "verification": "tests/test_verified_dataset.py",
+    "diff": "diff --git a/empty_average.py b/empty_average.py\n--- a/empty_average.py\n+++ b/empty_average.py\n@@ -1,2 +1,2 @@\n def check(values):\n-    return sum(values) / len(values) if values else 0\n+    return sum(values) / len(values)\n",
+    "files": {
+      "empty_average.py": "def check(values):\n    return sum(values) / len(values)\n"
+    },
+    "context": "The average of an empty sequence is defined as zero.",
+    "expected": [
+      {
+        "file_path": "empty_average.py",
+        "line_start": 2,
+        "category": "reliability",
+        "rationale": "The average of an empty sequence is defined as zero."
+      }
+    ]
+  },
+  {
+    "id": "last_page",
+    "source": "project-authored synthetic development fixture",
+    "split": "development",
+    "verification": "tests/test_verified_dataset.py",
+    "diff": "diff --git a/last_page.py b/last_page.py\n--- a/last_page.py\n+++ b/last_page.py\n@@ -1,2 +1,2 @@\n def check(total, size):\n-    return (total + size - 1) // size\n+    return total // size\n",
+    "files": {
+      "last_page.py": "def check(total, size):\n    return total // size\n"
+    },
+    "context": "Return the number of pages needed for a positive page size, including a partial last page.",
+    "expected": [
+      {
+        "file_path": "last_page.py",
+        "line_start": 2,
+        "category": "correctness",
+        "rationale": "Return the number of pages needed for a positive page size, including a partial last page."
+      }
+    ]
+  },
+  {
+    "id": "missing_setting",
+    "source": "project-authored synthetic development fixture",
+    "split": "development",
+    "verification": "tests/test_verified_dataset.py",
+    "diff": "diff --git a/missing_setting.py b/missing_setting.py\n--- a/missing_setting.py\n+++ b/missing_setting.py\n@@ -1,2 +1,2 @@\n def check(settings):\n-    return settings.get('retries', 3)\n+    return settings['retries']\n",
+    "files": {
+      "missing_setting.py": "def check(settings):\n    return settings['retries']\n"
+    },
+    "context": "A missing retry setting defaults to three attempts.",
+    "expected": [
+      {
+        "file_path": "missing_setting.py",
+        "line_start": 2,
+        "category": "reliability",
+        "rationale": "A missing retry setting defaults to three attempts."
+      }
+    ]
+  },
+  {
+    "id": "money_clamp",
+    "source": "project-authored synthetic development fixture",
+    "split": "development",
+    "verification": "tests/test_verified_dataset.py",
+    "diff": "diff --git a/money_clamp.py b/money_clamp.py\n--- a/money_clamp.py\n+++ b/money_clamp.py\n@@ -1,2 +1,2 @@\n def check(price, discount):\n-    return max(0, price - discount)\n+    return price - discount\n",
+    "files": {
+      "money_clamp.py": "def check(price, discount):\n    return price - discount\n"
+    },
+    "context": "A discount cannot make the final price negative.",
+    "expected": [
+      {
+        "file_path": "money_clamp.py",
+        "line_start": 2,
+        "category": "correctness",
+        "rationale": "A discount cannot make the final price negative."
+      }
+    ]
+  },
+  {
+    "id": "valid_zero",
+    "source": "project-authored synthetic development fixture",
+    "split": "development",
+    "verification": "tests/test_verified_dataset.py",
+    "diff": "diff --git a/valid_zero.py b/valid_zero.py\n--- a/valid_zero.py\n+++ b/valid_zero.py\n@@ -1,2 +1,2 @@\n def check(value, fallback):\n-    return fallback if value is None else value\n+    return value or fallback\n",
+    "files": {
+      "valid_zero.py": "def check(value, fallback):\n    return value or fallback\n"
+    },
+    "context": "Zero is a valid configured value; only None uses the fallback.",
+    "expected": [
+      {
+        "file_path": "valid_zero.py",
+        "line_start": 2,
+        "category": "correctness",
+        "rationale": "Zero is a valid configured value; only None uses the fallback."
+      }
+    ]
+  },
+  {
+    "id": "input_mutation",
+    "source": "project-authored synthetic development fixture",
+    "split": "development",
+    "verification": "tests/test_verified_dataset.py",
+    "diff": "diff --git a/input_mutation.py b/input_mutation.py\n--- a/input_mutation.py\n+++ b/input_mutation.py\n@@ -1,2 +1,3 @@\n def check(values):\n-    return sorted(values)\n+    values.sort()\n+    return values\n",
+    "files": {
+      "input_mutation.py": "def check(values):\n    values.sort()\n    return values\n"
+    },
+    "context": "Return a sorted copy without changing the caller's input.",
+    "expected": [
+      {
+        "file_path": "input_mutation.py",
+        "line_start": 2,
+        "category": "correctness",
+        "rationale": "Return a sorted copy without changing the caller's input."
+      }
+    ]
+  },
+  {
+    "id": "clean_boolean",
+    "source": "project-authored synthetic development fixture",
+    "split": "development",
+    "verification": "tests/test_verified_dataset.py",
+    "diff": "diff --git a/clean_boolean.py b/clean_boolean.py\n--- a/clean_boolean.py\n+++ b/clean_boolean.py\n@@ -1,2 +1,2 @@\n def check(values):\n-    return len(values) > 0\n+    return bool(values)\n",
+    "files": {
+      "clean_boolean.py": "def check(values):\n    return bool(values)\n"
+    },
+    "context": "Return whether the sequence contains at least one item.",
+    "expected": []
+  },
+  {
+    "id": "clean_copy",
+    "source": "project-authored synthetic development fixture",
+    "split": "development",
+    "verification": "tests/test_verified_dataset.py",
+    "diff": "diff --git a/clean_copy.py b/clean_copy.py\n--- a/clean_copy.py\n+++ b/clean_copy.py\n@@ -1,2 +1,2 @@\n def check(values):\n-    return list(values)\n+    return values.copy()\n",
+    "files": {
+      "clean_copy.py": "def check(values):\n    return values.copy()\n"
+    },
+    "context": "Return an independent shallow copy of a list.",
+    "expected": []
+  },
+  {
+    "id": "clean_membership",
+    "source": "project-authored synthetic development fixture",
+    "split": "development",
+    "verification": "tests/test_verified_dataset.py",
+    "diff": "diff --git a/clean_membership.py b/clean_membership.py\n--- a/clean_membership.py\n+++ b/clean_membership.py\n@@ -1,2 +1,2 @@\n def check(value, values):\n-    return any(item == value for item in values)\n+    return value in values\n",
+    "files": {
+      "clean_membership.py": "def check(value, values):\n    return value in values\n"
+    },
+    "context": "Check whether a value exists in the supplied list.",
+    "expected": []
+  },
+  {
+    "id": "clean_sum",
+    "source": "project-authored synthetic development fixture",
+    "split": "development",
+    "verification": "tests/test_verified_dataset.py",
+    "diff": "diff --git a/clean_sum.py b/clean_sum.py\n--- a/clean_sum.py\n+++ b/clean_sum.py\n@@ -1,5 +1,2 @@\n def check(values):\n-    total = 0\n-    for value in values:\n-        total += value\n-    return total\n+    return sum(values)\n",
+    "files": {
+      "clean_sum.py": "def check(values):\n    return sum(values)\n"
+    },
+    "context": "Return the sum of numeric values, or zero for an empty sequence.",
+    "expected": []
+  }
+]

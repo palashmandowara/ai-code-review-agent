@@ -23,26 +23,40 @@ class Finding(BaseModel):
 
 
 def changed_lines(diff: str) -> dict[str, set[int]]:
+    """Map added lines in ordinary unified diffs; hunk contents are never headers."""
     result: dict[str, set[int]] = {}
     path = None
     line = 0
+    in_hunk = False
+    old_remaining = new_remaining = 0
     for raw in diff.splitlines():
         if raw.startswith("diff --git "):
-            path = None
-        if raw.startswith("+++ b/"):
-            path = raw[6:]
+            path, in_hunk = None, False
+        elif raw.startswith("@@") and path:
+            match = re.match(r"@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", raw)
+            in_hunk = bool(match)
+            if match:
+                old_remaining = int(match.group(1) or 1)
+                line = int(match.group(2))
+                new_remaining = int(match.group(3) or 1)
+        elif in_hunk and path:
+            if raw.startswith("+"):
+                result[path].add(line)
+                line += 1
+                new_remaining -= 1
+            elif raw.startswith(" "):
+                line += 1
+                old_remaining -= 1
+                new_remaining -= 1
+            elif raw.startswith("-"):
+                old_remaining -= 1
+            if old_remaining <= 0 and new_remaining <= 0:
+                in_hunk = False
+        elif raw.startswith("+++ b/"):
+            path = raw[6:].split("\t", 1)[0]
             result.setdefault(path, set())
         elif raw.startswith("+++ /dev/null"):
             path = None
-        elif path and raw.startswith("@@"):
-            match = re.search(r"\+(\d+)(?:,(\d+))?", raw)
-            if match:
-                line = int(match.group(1))
-        elif path and raw.startswith("+") and not raw.startswith("+++"):
-            result[path].add(line)
-            line += 1
-        elif path and raw.startswith(" "):
-            line += 1
     return result
 
 
@@ -154,8 +168,9 @@ async def model_review(diff: str, approach: str, context: str = "", diagnostics:
             output_tokens = usage.get("completion_tokens", 0)
             metadata.update({"model": result.get("model", model), "prompt_version": "v2",
                 "input_tokens": input_tokens, "output_tokens": output_tokens,
-                "estimated_usd": round((input_tokens * float(os.getenv("INPUT_USD_PER_MILLION", "0"))
-                    + output_tokens * float(os.getenv("OUTPUT_USD_PER_MILLION", "0"))) / 1_000_000, 8)})
+                "cost_configured": bool(os.getenv("INPUT_USD_PER_MILLION") and os.getenv("OUTPUT_USD_PER_MILLION")),
+                "estimated_usd": round((input_tokens * float(os.getenv("INPUT_USD_PER_MILLION") or "0")
+                    + output_tokens * float(os.getenv("OUTPUT_USD_PER_MILLION") or "0")) / 1_000_000, 8)})
         data = json.loads(result["choices"][0]["message"]["content"])
         if not isinstance(data, dict) or not isinstance(data.get("findings"), list):
             raise ValueError("Model response lacked a findings array")
@@ -200,6 +215,8 @@ def demo_review(diff: str) -> list[dict]:
 async def review(diff: str, approach: str = "plain", root: Path | None = None,
                  context: str | None = None, diagnostics: str | None = None,
                  metadata: dict | None = None) -> list[Finding]:
+    if len(diff) > 30000:
+        raise ValueError("Diff exceeds 30,000 characters; split it into smaller reviews")
     if approach not in {"plain", "context", "tool"}:
         raise ValueError("Unknown approach")
     if os.getenv("REVIEW_MODE") == "demo":
@@ -249,3 +266,4 @@ def score(predicted: list[Finding], expected: list[dict], rejected: int = 0) -> 
 
 def diff_hash(diff: str) -> str:
     return hashlib.sha256(diff.encode()).hexdigest()
+
