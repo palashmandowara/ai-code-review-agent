@@ -1,27 +1,17 @@
 """Authenticated dashboard API. Manual reviews never publish to GitHub."""
 import hmac
 import os
-import time
-from datetime import datetime, timezone
+from datetime import timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
-from sqlalchemy import JSON, DateTime, String, select
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
-from .core import changed_lines, review
-from .storage import Base, ReviewRun, session_factory
-
-
-class ManualRun(Base):
-    __tablename__ = "manual_review_runs"
-    id: Mapped[int] = mapped_column(primary_key=True)
-    title: Mapped[str] = mapped_column(String(120))
-    approach: Mapped[str] = mapped_column(String(30))
-    status: Mapped[str] = mapped_column(String(30))
-    data: Mapped[dict] = mapped_column(JSON)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+from .core import changed_lines
+from .jobs import schedule
+from .storage import ManualRun, ReviewRun, session_factory
 
 
 def authorize(authorization: str = Header(default="")):
@@ -51,8 +41,9 @@ def serialize(run):
             "source": "manual" if manual else "github", "status": run.status,
             "approach": run.approach, "created_at": run.created_at.replace(tzinfo=timezone.utc).isoformat(),
             "duration_ms": data.get("duration_ms") if manual else run.duration_ms,
-            "metadata": data.get("metadata", {}) if manual else (run.model_metadata or {}),
-            "findings": findings, "diff": data.get("diff"),
+            "metadata": (data.get("metadata", {}) if manual else
+                         {k: v for k, v in (run.model_metadata or {}).items() if k != "diff"}),
+            "findings": findings, "diff": data.get("diff") if manual else (run.model_metadata or {}).get("diff"),
             "error": ("Review failed. Check the provider configuration."
                       if run.status == "failed" else None),
             "url": None if manual else f"https://github.com/{run.repository}/pull/{run.pr_number}"}
@@ -61,7 +52,8 @@ def serialize(run):
 @router.get("/runs")
 def runs():
     with session_factory()() as db:
-        github = db.scalars(select(ReviewRun).order_by(ReviewRun.created_at.desc()).limit(100)).all()
+        github = db.scalars(select(ReviewRun).options(selectinload(ReviewRun.findings))
+                            .order_by(ReviewRun.created_at.desc()).limit(100)).all()
         manual = db.scalars(select(ManualRun).order_by(ManualRun.created_at.desc()).limit(100)).all()
         items = sorted([serialize(r) for r in [*github, *manual]], key=lambda r: r["created_at"], reverse=True)[:100]
         # Diff and full finding text are only returned by the detail endpoint.
@@ -85,26 +77,31 @@ def detail(run_id: str):
         return serialize(run)
 
 
-@router.post("/reviews", status_code=201)
-async def manual_review(payload: ManualRequest):
+@router.post("/reviews", status_code=202)
+def manual_review(payload: ManualRequest):
     if not any(changed_lines(payload.diff).values()):
         raise HTTPException(422, "Provide a unified diff with file headers and added lines.")
     if payload.approach == "context" and not payload.context.strip():
         raise HTTPException(422, "Repository context is required for this approach.")
-    started = time.monotonic()
-    metadata = {}
     with session_factory()() as db:
-        run = ManualRun(title=payload.title, approach=payload.approach, status="running", data={"diff": payload.diff})
+        run = ManualRun(title=payload.title, approach=payload.approach, status="queued",
+                        data={"diff": payload.diff, "context": payload.context})
         db.add(run)
+        db.flush()
+        schedule(db, "manual", run.id)
         db.commit()
-        try:
-            findings = await review(payload.diff, payload.approach, context=payload.context, metadata=metadata)
-            run.status = "completed"
-            run.data = {"diff": payload.diff, "findings": [f.model_dump() for f in findings], "metadata": metadata,
-                        "duration_ms": int((time.monotonic() - started) * 1000)}
-        except Exception:
-            run.status = "failed"
-            run.data = {"diff": payload.diff, "metadata": metadata,
-                        "duration_ms": int((time.monotonic() - started) * 1000)}
+        return serialize(run)
+
+
+@router.post("/runs/{run_id}/retry", status_code=202)
+def retry(run_id: str):
+    item = detail(run_id)
+    model = ManualRun if item["source"] == "manual" else ReviewRun
+    with session_factory()() as db:
+        run = db.scalar(select(model).where(model.id == int(run_id.split("-", 1)[1])).with_for_update())
+        if run.status != "failed":
+            raise HTTPException(409, "Only failed reviews can be retried")
+        run.status = "queued"
+        schedule(db, item["source"], run.id)
         db.commit()
         return serialize(run)

@@ -105,6 +105,38 @@ function App() {
       return () => clearInterval(id);
     }
   }, [token]);
+  useEffect(() => {
+    if (
+      !token ||
+      page !== "detail" ||
+      !selected ||
+      !["queued", "running"].includes(selected.status)
+    )
+      return;
+    let stopped = false;
+    const timer = setInterval(async () => {
+      try {
+        const fresh = await api("/runs/" + selected.id);
+        if (!stopped) setSelected(fresh);
+      } catch (e) {
+        if (!stopped) setError((e as Error).message);
+      }
+    }, 2000);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+    };
+  }, [token, page, selected?.id, selected?.status]);
+  async function retrySelected() {
+    if (!selected) return;
+    try {
+      setSelected(
+        await api("/runs/" + selected.id + "/retry", { method: "POST" }),
+      );
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
   async function open(id: string) {
     setError("");
     try {
@@ -391,6 +423,7 @@ function App() {
                           "queued",
                           "failed",
                           "stale",
+                          "skipped",
                         ].map((s) => (
                           <option key={s}>{s}</option>
                         ))}
@@ -651,7 +684,8 @@ function App() {
                       </button>
                       {submitting && (
                         <small role="status">
-                          Keep this page open while the model reviews your diff.
+                          Your review is saved to the queue and continues in the
+                          background.
                         </small>
                       )}
                     </div>
@@ -683,6 +717,14 @@ function App() {
                   {selected.error && (
                     <div className="error" role="alert">
                       {selected.error}
+                      {selected.status === "failed" && (
+                        <button
+                          className="secondary"
+                          onClick={() => void retrySelected()}
+                        >
+                          Retry review
+                        </button>
+                      )}
                     </div>
                   )}
                   <div className="detail-grid">

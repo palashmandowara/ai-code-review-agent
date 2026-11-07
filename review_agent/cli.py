@@ -6,6 +6,7 @@ import os
 import statistics
 import sys
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .core import review, score, validate_findings
@@ -52,6 +53,7 @@ async def benchmark(path: Path, approach: str, predictions_path: Path | None = N
     failures = []
     costs = []
     models = set()
+    started_at = datetime.now(timezone.utc).isoformat()
     for case in cases:
         start = time.monotonic()
         try:
@@ -78,13 +80,14 @@ async def benchmark(path: Path, approach: str, predictions_path: Path | None = N
         except Exception as exc:
             failures.append({"case": case["id"], "error": str(exc)})
             print(json.dumps({"case": case["id"], "error": str(exc)}))
+            durations.append(time.monotonic() - start)
             continue
         durations.append(time.monotonic() - start)
     tp, fp, fn = (totals[key] for key in ("tp", "fp", "fn"))
     complete = not failures
     precision = tp / (tp + fp) if tp + fp else 0
     recall = tp / (tp + fn) if tp + fn else 0
-    print(json.dumps({"approach": approach, "cases": len(cases), **totals,
+    summary = {"approach": approach, "cases": len(cases), **totals,
         "scored_cases": len(cases) - len(failures), "complete": complete,
         "precision": precision if complete else None, "recall": recall if complete else None,
         "f1": (2 * precision * recall / (precision + recall) if precision + recall else 0) if complete else None,
@@ -99,7 +102,10 @@ async def benchmark(path: Path, approach: str, predictions_path: Path | None = N
         "review_mode": os.getenv("REVIEW_MODE", "model") if predictions is None else "replay",
         "metric": "provisional_location_match_requires_semantic_review",
         "models": sorted(models),
-        "failures": failures}))
+        "failures": failures, "failure_rate": len(failures) / len(cases) if cases else None,
+        "started_at": started_at, "application_sha": os.getenv("APP_GIT_SHA", "unrecorded")}
+    print(json.dumps(summary))
+    return summary
 
 
 def main():
@@ -118,8 +124,11 @@ def main():
         findings = asyncio.run(review(args.diff.read_text(), args.approach, args.root))
         print(json.dumps([f.model_dump() for f in findings], indent=2))
     else:
-        asyncio.run(benchmark(args.dataset, args.approach, args.predictions))
+        result = asyncio.run(benchmark(args.dataset, args.approach, args.predictions))
+        if not result["complete"]:
+            raise SystemExit(1)
 
 
 if __name__ == "__main__":
     main()
+

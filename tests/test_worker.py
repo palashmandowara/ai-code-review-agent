@@ -38,7 +38,7 @@ def test_worker_posts_once_and_records_results(tmp_path, monkeypatch, approach):
             return SimpleNamespace(text=diff)
         return SimpleNamespace(json=lambda: {"head": {"sha": "sha"}})
 
-    async def context(*args):
+    async def context(*args, **kwargs):
         return "FILE a.py\nnew", "[]"
 
     async def fake_review(diff_arg, approach_arg, **kwargs):
@@ -61,3 +61,4 @@ def test_worker_posts_once_and_records_results(tmp_path, monkeypatch, approach):
         assert run.status == "completed"
         assert run.model_metadata["model"] == "mock"
         assert len(run.findings) == 1
+

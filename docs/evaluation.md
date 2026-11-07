@@ -37,3 +37,23 @@ foreach ($approach in 'plain','context','tool') {
 ```
 
 Check each final JSON line for `"complete": true` before comparing scores. Inspect individual findings and failures manually. To rescore a saved JSONL run after a scoring change without model calls, use `--predictions results/pilot-plain.jsonl`; the replay preserves rejected-finding counts but has no original latency or token-cost measurement. Never count the deterministic `REVIEW_MODE=demo` as an AI result. For a defensible future evaluation, curate more upstream patches and clean real changes, review licenses and labels independently, freeze a separate held-out set, and rerun with a fixed model version.
+
+
+## Verified development fixtures and semantic adjudication
+
+`verified-dev.json` contains eight injected bugs and four clean controls generated from
+project-authored sources in `tests/fixtures/verified_cases.py`. Pytest checks the original
+behavior, demonstrates each regression, and checks clean alternatives. The dataset must
+match the generator byte-for-byte after JSON parsing. These cases are development data;
+none are presented as a new held-out benchmark or new model results.
+
+Use `python -m review_agent.evaluation DATASET RESULTS JUDGMENTS --template` to create a
+pending worksheet. A reviewer must fill their name and each verdict/rationale; correct
+findings also identify `expected_index`. Run the same command without `--template` to
+calculate semantic metrics. Dataset/prediction hashes reject stale worksheets. Duplicate
+findings cannot count twice. Failed cases count as missed expected defects and are reported
+in failure rate. Location-only results remain clearly labeled provisional.
+
+A future final experiment must freeze an independent dataset before tuning, verify upstream
+licenses and reproducing tests, preserve raw outputs, repeat each approach, and report
+uncertainty. Additional development fixtures do not substitute for that experiment.

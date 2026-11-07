@@ -1,94 +1,137 @@
 # AI Code Review Agent
 
-GitHub App webhook service that reviews changed lines, validates structured findings, and posts inline comments. Includes a CLI benchmark for comparing three review configurations.
+A GitHub-integrated reviewer that checks pull request diffs for concrete bugs, validates
+structured findings, and posts inline comments. A React dashboard shows review history,
+findings, and queued manual diff reviews. An evaluation harness measures results without
+pretending that a correct line number proves a correct bug report.
 
-## Local setup
+**Status:** working portfolio MVP under active hardening. The six-case model pilot is
+exploratory, not a general accuracy benchmark. Public hosting and current remote CI must
+be verified separately. See [release status](docs/release-status.md).
 
-1. Use Python 3.11+; run `pip install -e '.[dev]'`.
-2. Copy `.env.example` to `.env` and set the values. Never commit `.env`.
-3. Run `pytest -q` and `ruff check .`.
-4. Review a diff with `review-agent review change.diff --approach plain`.
-5. Run the example benchmark with `review-agent benchmark benchmark/datasets/smoke.json --approach plain`.
+## What it does
 
-Model requests use `LLM_API_URL` (OpenAI-compatible chat completions), `LLM_MODEL`, and `LLM_API_KEY`. Set `INPUT_USD_PER_MILLION` and `OUTPUT_USD_PER_MILLION` to the provider's current token prices for cost estimates; the defaults of zero mean cost is unconfigured.
+- Reviews changed lines using plain prompting, repository context, or context plus Ruff.
+- Receives signed GitHub App webhooks, persists jobs before acknowledging, and processes
+  them with Redis/RQ outside the HTTP request.
+- Rechecks the PR head before publishing and uses review markers to reduce duplicates.
+- Shows history, evidence, severity, and available diffs in a responsive dashboard.
+- Accepts manual diffs without writing anything to GitHub; failed runs can be retried.
+- Provides reproducible fixture checks and a separate human-adjudicated evaluation step.
 
-For a no-cost end-to-end test, set `REVIEW_MODE=demo` in `.env` and restart the API and worker. The demo reviewer has one deterministic fixture rule: it flags `return True` inside a changed `can_delete` function. It is not an AI model and its results must never be presented as model performance. Leave `LLM_API_KEY` blank in demo mode.
+It does not autonomously fix code, merge PRs, or guarantee bug detection. Repository
+retrieval is a bounded filename heuristic, not semantic search or a caller graph.
 
-## GitHub App
+## Quick start: local demo
 
-Create a GitHub App with Pull requests read/write and Contents read permissions. Subscribe to pull request events. Configure its webhook URL as `https://YOUR_HOST/webhooks/github`, set `GITHUB_WEBHOOK_SECRET`, `GITHUB_APP_ID`, and the PEM key in `GITHUB_PRIVATE_KEY` (escaped newlines supported). Install on a test repository. Run `docker compose up --build` behind HTTPS. The API verifies signatures, queues valid pull request events, and the worker checks the head SHA before publishing comments.
-
-The diff, source files, and comments are untrusted data. No PR code is executed by the app. For `context` and `tool`, the worker fetches up to 12 changed source files and six related files, including tests with matching names, pinned to the head SHA. `tool` also parses changed Python files with Ruff via stdin; this is static analysis, not execution. Related-file retrieval is a simple filename heuristic, not a full caller graph.
-
-## Benchmark
-
-Dataset JSON items contain `id`, `diff`, and `expected` findings with `file_path`, `line_start`, and `category`. Matching is one-to-one using file, expected line range, and category. Run each approach against the same versioned dataset. The included 12 synthetic cases are smoke fixtures, split into `dev.json` and `heldout.json`; they are not a defensible final benchmark. Build a larger independently verified set with public bug provenance and negative controls before publishing performance claims. The CLI prints case results and aggregate precision, recall, F1, median/p95 latency, configured token-cost estimates, and failures. The model identifier and token usage appear per case.
-
-Check the evaluation code offline with `review-agent benchmark benchmark/datasets/dev.json --predictions benchmark/datasets/oracle_predictions.json`. The oracle file is a scoring test, never a measured model result. For real experiments, run each approach on `dev.json`, freeze prompts and matching rules, then run each on `heldout.json`. Save full terminal output and configuration for reproducibility.
-
-A six-case sourced pilot is in `benchmark/datasets/pilot.json`: four adapted regressions from documented BugsInPy fixes and two synthetic clean controls. It is a workflow demonstration, not a held-out performance benchmark. See [`docs/evaluation.md`](docs/evaluation.md) for provenance, limitations, and Windows commands to run all three approaches with a configured model.
-
-The first Groq pilot results, including the rejected-location case and interpretation limits, are in [`docs/pilot-results.md`](docs/pilot-results.md).
-
-## Deployment
-
-### Free hosted review on this repository
-
-The `Live AI review` GitHub Actions workflow runs the existing `plain` reviewer on owner/collaborator pull requests. It needs no always-on machine, Redis, database, Smee tunnel, or GitHub App private key. In this repository, create an Actions repository secret named `GROQ_API_KEY` containing your Groq API key (Settings → Secrets and variables → Actions → New repository secret). The workflow provides its own short-lived `GITHUB_TOKEN` and posts a review to each new PR commit. It reads PR diffs through GitHub's API and installs code from the trusted default branch; it never checks out or runs submitted PR code. A large diff (>30,000 characters) is skipped. Review the Actions log for errors or skipped PRs. The workflow is intentionally restricted to owner, member, or collaborator PRs to limit free-tier usage. Never commit API keys or paste them into issue/PR text.
-
-GitHub-hosted standard runners are free for public repositories; private repositories have included free minutes subject to the account's quota. Groq's free plan has rate limits. A GitHub Actions run is the hosted review deployment, not a continuously running HTTP endpoint. The original GitHub App integration still runs with Docker Compose locally; it is not hosted by this workflow.
-
-Docker Compose supplies PostgreSQL and Redis for local development. Hosting that webhook service continuously requires a VM or managed database/queue, HTTPS reverse proxy, secret management, backups, and monitoring. No AWS resources are provisioned by this repository.
-
-See [`docs/evaluation.md`](docs/evaluation.md) for the experiment protocol and [`docs/security.md`](docs/security.md) for operational limits. This repository creates tables on first startup and does not yet include migrations; for an existing development database created by an earlier version, back it up and recreate it before running the new schema.
-
-
-## Review dashboard
-
-The React + TypeScript dashboard is served by FastAPI at `/` after the frontend is built.
-It includes searchable review history (latest 100), findings with evidence, manual diff reviews,
-and a clearly labeled view of the published six-case pilot. GitHub history reads the same
-review/finding tables as the worker. The GitHub Actions-only reviewer does not write to this database.
-
-### Run with Docker
-
-Set a long random `DASHBOARD_TOKEN` in `.env` (for example, generate one with
-`python -c "import secrets; print(secrets.token_urlsafe(32))"`), then run:
+Requires Docker with Compose. Copy `.env.example` to `.env`, generate a random token with
+`python -c "import secrets; print(secrets.token_urlsafe(32))"`, and set it as `DASHBOARD_TOKEN`.
+Then:
 
 ```sh
 docker compose up --build
 ```
 
-Open `http://localhost:8000` and enter that token. The UI keeps it in memory only.
-Use HTTPS when hosting beyond localhost. Dashboard endpoints are disabled if the token is missing;
-this is a single-workspace shared-token dashboard, not a multi-user authentication system.
+Open **http://localhost:8000**, enter your token, select **New review → Load example → Run
+review**. The review is queued and the page updates when it finishes. `REVIEW_MODE=demo`
+uses a deterministic authorization fixture rule; the UI labels this output as demo data.
+It is not an AI result and needs no model API key.
 
-### Frontend development
+Compose starts the API/dashboard, dispatcher, RQ worker, PostgreSQL, and persistent Redis.
+The API port is bound to localhost. PostgreSQL and Redis are not exposed to the host.
+`/health` checks the HTTP process; `/ready` checks database and Redis connectivity.
 
-```sh
-cd frontend
-npm ci
-npm run dev
+## Use a real model
+
+Set these in `.env`, then recreate the app services:
+
+```dotenv
+REVIEW_MODE=model
+LLM_API_URL=https://api.groq.com/openai/v1/chat/completions
+LLM_MODEL=openai/gpt-oss-20b
+LLM_API_KEY=your-provider-key
 ```
 
-Run `uvicorn review_agent.api:app --reload` separately at port 8000 with
-`DASHBOARD_TOKEN`, `DATABASE_URL`, and model variables exported in its environment.
-Vite proxies `/api` to port 8000. For a single-server build, run `npm run build` in
-`frontend`, then start/restart FastAPI. Python package data includes the generated assets.
-Docker builds the frontend automatically; generated bundles and node_modules are not committed.
+```sh
+docker compose up -d --force-recreate api worker dispatcher
+```
 
-Manual reviews accept unified diffs up to 30,000 characters with optional supplied context
-(up to 12,000 characters). They call the configured model provider, persist the diff and findings
-in a new `manual_review_runs` table, and **never post to GitHub**. Tool-assisted manual reviews
-are intentionally unavailable without source files; use the existing GitHub App or benchmark CLI.
-Requests run synchronously with the existing provider timeout; keep the page open until completion.
-A process crash can leave a manual run marked running. This version does not include recovery or deletion UI.
-Existing GitHub runs do not store a diff, so their detail screen links back to the PR.
-Set `REVIEW_MODE=demo` for the deterministic authorization fixture; the UI explicitly labels demo output.
-Pilot cards are a static transcription of `docs/pilot-results.md`, not live benchmark execution.
+An OpenAI-compatible Chat Completions endpoint is supported. Provider access, limits,
+and charges are your responsibility. Configure both token prices for meaningful cost
+estimates. Empty prices mean **unconfigured**, not free inference.
 
-Dashboard API (all require `Authorization: Bearer <DASHBOARD_TOKEN>`):
+## Connect a GitHub App
 
-- `GET /api/dashboard/runs`: latest review summaries.
-- `GET /api/dashboard/runs/{github-N|manual-N}`: findings and available diff.
-- `POST /api/dashboard/reviews`: `{title, diff, approach: "plain" | "context", context}`.
+1. Create an App with **Contents: read** and **Pull requests: read/write** permissions.
+2. Subscribe to pull request events and install it on your test repository.
+3. Host the API behind HTTPS; set the webhook URL to `/webhooks/github`.
+4. Set `GITHUB_WEBHOOK_SECRET`, `GITHUB_APP_ID`, and `GITHUB_PRIVATE_KEY` in the server
+   environment. PEM keys may use escaped newlines.
+5. Open/update a PR, inspect the bot's inline comments, then inspect the same run in the
+   dashboard. Set `REVIEW_APPROACH` to `plain`, `context`, or `tool`.
+
+New App runs retain bounded diffs for dashboard inspection. Historical runs without saved
+diffs link back to GitHub. The optional `Live AI review` Actions workflow runs independently
+and does **not** populate the dashboard database. It uses trusted base-branch code and
+never checks out submitted PR code.
+
+## Development
+
+```sh
+python -m venv .venv
+# Activate .venv for your shell, then:
+python -m pip install -e '.[dev]'
+python -m ruff check .
+python -m pytest -q
+cd frontend
+npm ci
+npm run build
+npx playwright install chromium --only-shell
+npm run test:e2e
+```
+
+The browser test launcher uses a disposable SQLite database, in-memory fake Redis,
+real RQ SimpleWorker/dispatcher, and demo mode. It makes no GitHub/model calls. Integration tests
+exercise signed webhook → SQL outbox → queue → worker → mocked GitHub comment → dashboard.
+Container CI separately checks real PostgreSQL and Redis when GitHub Actions can start.
+
+For frontend hot reload use `npm run dev`. Run FastAPI at port 8000 with environment
+variables exported; Vite proxies `/api` there. Local Python does not automatically read
+`.env`. Start `python -m review_agent.jobs` and `rq worker reviews --with-scheduler`
+against the same database/Redis for queued work.
+
+## Evaluation
+
+- `smoke.json` / `dev.json` / `heldout.json`: original tiny synthetic workflow fixtures.
+  Their split names do not establish a defensible held-out experiment.
+- `verified-dev.json`: 12 project-authored cases with executable behavior checks: eight
+  injected defects and four clean controls. Regenerate with
+  `python scripts/build_verified_dataset.py`. This is **development data**.
+- `pilot.json`: four adapted BugsInPy defects and two synthetic clean controls.
+  [Pilot report](docs/pilot-results.md) records the existing model results and limitations.
+
+```sh
+review-agent benchmark benchmark/datasets/verified-dev.json --approach plain > results.jsonl
+python -m review_agent.evaluation benchmark/datasets/verified-dev.json results.jsonl judgments.json --template
+# Inspect each finding and fill reviewer, verdict, rationale, and expected_index.
+python -m review_agent.evaluation benchmark/datasets/verified-dev.json results.jsonl judgments.json
+```
+
+Repeat runs for each approach with a fixed model, prompt, dataset, and `APP_GIT_SHA`.
+The numerical harness uses provisional location matching; the separate adjudicator
+requires recorded human judgments and binds them to dataset/prediction hashes. Failed
+cases are visible; the CLI exits nonzero for incomplete runs. Never report demo/oracle
+output as model performance. See [evaluation protocol](docs/evaluation.md).
+
+## Architecture and operations
+
+See [architecture](docs/architecture.md), [deployment](docs/deployment.md),
+[security](docs/security.md), and [demo guide](docs/demo.md).
+
+The dashboard uses a shared token, not multi-user accounts. Tokens remain in browser memory.
+Source code is stored in the database and sent to the configured model provider in model
+mode. Use trusted repositories, HTTPS, and restricted network access. Keep keys out of git.
+
+Tables are created additively; this release adds `manual_review_runs` and `review_outbox`
+without changing existing columns. It does not provide a general schema migration engine.
+Back up existing databases before upgrades. No cloud resources are provisioned automatically.

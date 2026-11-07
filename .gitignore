@@ -11,3 +11,6 @@ results/
 frontend/node_modules/
 review_agent/static/
 *.egg-info/
+
+frontend/test-results/
+frontend/playwright-report/

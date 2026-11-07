@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 from review_agent.api import app
+from review_agent.jobs import process_manual
 from review_agent.storage import ReviewRun, StoredFinding, session_factory
 
 DIFF = ('diff --git a/access.py b/access.py\n--- a/access.py\n+++ b/access.py\n'
@@ -28,8 +29,11 @@ def test_dashboard_requires_token(monkeypatch, tmp_path):
 def test_manual_review_persists_and_lists_without_diff(monkeypatch, tmp_path):
     client = setup(monkeypatch, tmp_path)
     response = client.post("/api/dashboard/reviews", headers=AUTH, json={"diff": DIFF, "title": "Auth check"})
-    assert response.status_code == 201
+    assert response.status_code == 202
     run = response.json()
+    assert run["status"] == "queued"
+    process_manual(int(run["id"].split("-")[1]))
+    run = client.get(f'/api/dashboard/runs/{run["id"]}', headers=AUTH).json()
     assert run["status"] == "completed"
     assert run["findings"][0]["line_start"] == 2
     assert run["metadata"]["model"] == "offline-demo-rule"
@@ -55,8 +59,12 @@ def test_provider_failure_is_saved_without_secret(monkeypatch, tmp_path):
     async def fail(*args, **kwargs):
         raise RuntimeError("secret-provider-token")
 
-    monkeypatch.setattr("review_agent.dashboard.review", fail)
+    monkeypatch.setattr("review_agent.jobs.review", fail)
     response = client.post("/api/dashboard/reviews", headers=AUTH, json={"diff": DIFF})
+    import pytest
+    with pytest.raises(RuntimeError):
+        process_manual(int(response.json()["id"].split("-")[1]))
+    response = client.get(f'/api/dashboard/runs/{response.json()["id"]}', headers=AUTH)
     assert response.json()["status"] == "failed"
     assert "secret-provider-token" not in response.text
     assert client.get("/api/dashboard/runs", headers=AUTH).json()[0]["status"] == "failed"

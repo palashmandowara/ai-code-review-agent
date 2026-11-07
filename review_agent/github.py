@@ -29,7 +29,7 @@ async def github_request(token: str, method: str, path: str, **kwargs):
         return response
 
 
-async def repository_context(token: str, repository: str, sha: str, diff: str) -> tuple[str, str]:
+async def repository_context(token: str, repository: str, sha: str, diff: str, analyze: bool = True) -> tuple[str, str]:
     """Fetch bounded changed files and related tests/modules pinned to the PR SHA."""
     from .core import changed_lines
 
@@ -59,7 +59,7 @@ async def repository_context(token: str, repository: str, sha: str, diff: str) -
             continue
         content = base64.b64decode(item["content"]).decode("utf-8", errors="replace")
         snippets.append(f"FILE {name}\n{content[:3000]}")
-        if name in changed and name.endswith(".py"):
+        if analyze and name in changed and name.endswith(".py"):
             try:
                 proc = await asyncio.create_subprocess_exec("ruff", "check", "--output-format", "json",
                     "--stdin-filename", name, "-", stdin=asyncio.subprocess.PIPE,
@@ -90,7 +90,7 @@ def process_pull_request(run_id: int):
     sessions = session_factory()
     with sessions() as db:
         run = db.get(ReviewRun, run_id)
-        if not run or run.status == "completed":
+        if not run or run.status in {"completed", "stale", "skipped"}:
             return
         run.status = "running"
         db.commit()
@@ -99,24 +99,29 @@ def process_pull_request(run_id: int):
             token = asyncio.run(installation_token(run.installation_id))
             pr_path = f"/repos/{run.repository}/pulls/{run.pr_number}"
             pr = asyncio.run(github_request(token, "GET", pr_path)).json()
-            if pr["head"]["sha"] != run.head_sha:
+            if pr["head"]["sha"] != run.head_sha or pr.get("state", "open") != "open":
                 run.status = "stale"
                 db.commit()
                 return
             diff = asyncio.run(github_request(token, "GET", pr_path,
                 accept="application/vnd.github.diff")).text
+            if len(diff) > 30000:
+                run.status = "skipped"
+                run.model_metadata = {"reason": "Diff exceeds 30,000 characters"}
+                db.commit()
+                return
             context, diagnostics = "", ""
             if run.approach != "plain":
                 context, diagnostics = asyncio.run(repository_context(token, run.repository,
-                    run.head_sha, diff))
+                    run.head_sha, diff, analyze=run.approach == "tool"))
             metadata = {}
             findings = asyncio.run(review(diff, run.approach, context=context,
                 diagnostics=diagnostics, metadata=metadata))
-            run.model_metadata = metadata
+            run.model_metadata = {**metadata, "diff": diff}
             marker = f"<!-- review-agent:{run.repository}:{run.pr_number}:{run.head_sha}:{run.approach} -->"
             if findings:
                 current = asyncio.run(github_request(token, "GET", pr_path)).json()
-                if current["head"]["sha"] != run.head_sha:
+                if current["head"]["sha"] != run.head_sha or current.get("state", "open") != "open":
                     run.status = "stale"
                     db.commit()
                     return
@@ -132,8 +137,9 @@ def process_pull_request(run_id: int):
             run.status = "completed"
         except Exception as exc:
             run.status = "failed"
-            run.error = str(exc)[:500]
+            run.error = type(exc).__name__
             raise
         finally:
             run.duration_ms = int((time.monotonic() - started) * 1000)
             db.commit()
+

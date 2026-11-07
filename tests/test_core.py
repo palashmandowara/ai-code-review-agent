@@ -43,3 +43,16 @@ def test_context_cannot_escape_checkout(tmp_path: Path):
     (tmp_path / "safe.py").write_text("pass")
     assert "pass" in safe_context(tmp_path, DIFF.replace("a.py", "safe.py"))
     assert safe_context(tmp_path, DIFF.replace("a.py", "../outside.py")) == ""
+
+
+
+def test_added_content_that_looks_like_a_file_header():
+    diff = 'diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n@@ -0,0 +1,2 @@\n+++ counter\n+next\n'
+    assert changed_lines(diff) == {"a.py": {1, 2}}
+
+
+def test_multiple_hunks_and_deleted_file():
+    diff = ('diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n'
+            '@@ -1 +1 @@\n-old\n+new\n@@ -9 +9 @@\n-old\n+new\n'
+            'diff --git a/b.py b/b.py\n--- a/b.py\n+++ /dev/null\n@@ -1 +0,0 @@\n-old\n')
+    assert changed_lines(diff) == {"a.py": {1, 9}}
