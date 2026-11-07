@@ -63,6 +63,8 @@ review pipeline. These are review configurations, not three independently traine
 
 ## Quick start: local demo
 
+On Windows, follow the [PowerShell acceptance walkthrough](docs/local-demo-windows.md).
+
 Requires Docker with Compose. Copy `.env.example` to `.env`, generate a random token with
 `python -c "import secrets; print(secrets.token_urlsafe(32))"`, and set it as `DASHBOARD_TOKEN`.
 From a clone of this repository:
