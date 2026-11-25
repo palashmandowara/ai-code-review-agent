@@ -25,6 +25,5 @@ remains private. The private-repository statement below describes the earlier st
   fixtures, failure reporting, and human-adjudicated precision/recall scoring.
 
 Only add deployment or accuracy figures after collecting the corresponding evidence.
-Both repositories are currently private; making them public is a separate visibility
-change requiring an owner decision and a full secret/history check. A private video demo
-or selected screenshots can be used without publishing the repository.
+The project repository is public; the separate test repository is private. Review any video
+or screenshots for secrets and private test data before sharing them.
