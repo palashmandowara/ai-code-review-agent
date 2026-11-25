@@ -56,3 +56,11 @@ def test_multiple_hunks_and_deleted_file():
             '@@ -1 +1 @@\n-old\n+new\n@@ -9 +9 @@\n-old\n+new\n'
             'diff --git a/b.py b/b.py\n--- a/b.py\n+++ /dev/null\n@@ -1 +0,0 @@\n-old\n')
     assert changed_lines(diff) == {"a.py": {1, 9}}
+
+
+def test_zero_length_hunk_followed_by_another_file():
+    diff = ('diff --git a/a.py b/a.py\n--- a/a.py\n+++ b/a.py\n'
+            '@@ -0,0 +1 @@\n+first\n'
+            'diff --git a/b.py b/b.py\n--- a/b.py\n+++ b/b.py\n'
+            '@@ -0,0 +1 @@\n+second\n')
+    assert changed_lines(diff) == {"a.py": {1}, "b.py": {1}}
