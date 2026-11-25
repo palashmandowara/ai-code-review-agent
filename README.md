@@ -19,6 +19,8 @@ installed GitHub App; the model identified an unconditional delete-permission bu
 posted an inline comment on the changed line, and the dashboard stored the matching review.
 The test PR remains open and unmerged.
 
+**Watch the [17-second dashboard demo](docs/media/ai-code-review-demo.mp4)** (download or open the MP4). It uses the offline deterministic example, not a live AI review. A real-model GitHub App test is described in the [release status](docs/release-status.md).
+
 ## Project at a glance
 
 **Python · FastAPI · React · TypeScript · PostgreSQL · Redis/RQ · Docker · GitHub App**
