@@ -14,6 +14,9 @@
 
 ## Accurate resume wording
 
+**Visibility update:** The project repository is now public; the separate test repository
+remains private. The private-repository statement below describes the earlier status.
+
 - Built a GitHub-integrated code review service with signed webhooks, background processing,
   structured LLM findings, and inline PR comments.
 - Developed a React/TypeScript dashboard for review history, evidence inspection, and queued
