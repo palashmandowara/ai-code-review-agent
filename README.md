@@ -240,6 +240,10 @@ The six-case pilot is exploratory; no general accuracy percentage is claimed her
 
 ## Resume and interview
 
+**Visibility update:** This project repository is public. The separate GitHub App test
+repository remains private; the earlier private-repository note below predates publication.
+The live App verification used a temporary tunnel, not a persistent public deployment.
+
 **AI Code Review Agent — Python, FastAPI, React, PostgreSQL, Redis, Docker**
 
 - Built a GitHub-integrated LLM code review service with signed webhooks, structured
@@ -251,6 +255,6 @@ The six-case pilot is exploratory; no general accuracy percentage is claimed her
 
 Use these implementation claims for a portfolio project you can explain and demonstrate.
 Do not describe it as production-deployed or add accuracy/user-impact figures without
-supporting evidence. The [demo guide](docs/demo.md) provides a walkthrough. The repositories
-are private, so a resume link alone will not give a recruiter access; arrange a private
-walkthrough or publish a reviewed, sanitized version separately.
+supporting evidence. The [demo guide](docs/demo.md) provides a walkthrough. This project
+repository is public; the separate test repository is private. Use a sanitized demo to show
+the integration without exposing test data or credentials.

@@ -36,9 +36,9 @@ def changed_lines(diff: str) -> dict[str, set[int]]:
             match = re.match(r"@@ -\d+(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", raw)
             in_hunk = bool(match)
             if match:
-                old_remaining = int(match.group(1) or 1)
+                old_remaining = int(match.group(1)) if match.group(1) is not None else 1
                 line = int(match.group(2))
-                new_remaining = int(match.group(3) or 1)
+                new_remaining = int(match.group(3)) if match.group(3) is not None else 1
         elif in_hunk and path:
             if raw.startswith("+"):
                 result[path].add(line)
