@@ -255,6 +255,6 @@ The live App verification used a temporary tunnel, not a persistent public deplo
 
 Use these implementation claims for a portfolio project you can explain and demonstrate.
 Do not describe it as production-deployed or add accuracy/user-impact figures without
-supporting evidence. The [demo guide](docs/demo.md) provides a walkthrough. The repositories
-are private, so a resume link alone will not give a recruiter access; arrange a private
-walkthrough or publish a reviewed, sanitized version separately.
+supporting evidence. The [demo guide](docs/demo.md) provides a walkthrough. This project
+repository is public; the separate test repository is private. Use a sanitized demo to show
+the integration without exposing test data or credentials.
