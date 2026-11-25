@@ -240,6 +240,10 @@ The six-case pilot is exploratory; no general accuracy percentage is claimed her
 
 ## Resume and interview
 
+**Visibility update:** This project repository is public. The separate GitHub App test
+repository remains private; the earlier private-repository note below predates publication.
+The live App verification used a temporary tunnel, not a persistent public deployment.
+
 **AI Code Review Agent — Python, FastAPI, React, PostgreSQL, Redis, Docker**
 
 - Built a GitHub-integrated LLM code review service with signed webhooks, structured
